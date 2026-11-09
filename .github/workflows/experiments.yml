@@ -1,0 +1,45 @@
+# Manual button: Actions -> "Run experiments" -> Run workflow.
+# Prints Experiment A and B tables to the job summary and saves them as an artifact.
+#
+# Note: GitHub's shared runners are noisy. Use this to sanity-check trends,
+# then produce the final report numbers on one quiet machine, all in one sitting.
+name: Run experiments
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experiments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build jar
+        run: mvn -B -ntp -q package -DskipTests
+
+      - name: Run experiments
+        run: java -jar target/algo2.jar --experiments-only | tee experiments.txt
+
+      - name: Add tables to summary
+        run: |
+          {
+            echo "### Experiments (${{ runner.os }}, $(nproc) vCPU, $(java -version 2>&1 | head -1))"
+            echo '```'
+            cat experiments.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experiments-${{ github.sha }}
+          path: experiments.txt

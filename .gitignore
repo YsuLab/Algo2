@@ -1,0 +1,24 @@
+# Build output
+target/
+out/
+bin/
+build/
+*.class
+
+# IDEs (each person keeps their own settings)
+.idea/
+*.iml
+.vscode/
+nbproject/private/
+nbproject/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local experiment dumps (attach final numbers to the report, not the repo)
+experiments*.txt
+*.csv

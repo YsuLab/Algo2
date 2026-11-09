@@ -1,0 +1,3 @@
+# Normalize line endings so Windows and Linux teammates don't fight over CRLF.
+* text=auto eol=lf
+*.jar binary

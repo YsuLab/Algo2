@@ -1,0 +1,78 @@
+# Runs on every push to main and every pull request.
+# Tests that hit a TODO stub show as "pending" (skipped), so CI stays green while you build.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build & test (Maven)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"   # pom.xml compiles to Java 17 bytecode (--release 17)
+          cache: maven
+
+      - name: Build and run tests
+        run: mvn -B -ntp verify
+
+      - name: Progress table (per owner)
+        if: always()
+        run: java .github/scripts/TestSummary.java target/surefire-reports >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports
+
+  plain-javac:
+    # The instructor may compile with plain javac or an IDE, not Maven.
+    # This job proves the code builds and runs that way too, on the oldest JDK we support.
+    name: Plain javac on JDK 17
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Compile without Maven
+        run: javac -Xlint:all -d out src/main/java/cpcs324/*.java
+
+      - name: Run campus part from the repo root
+        run: |
+          set +e
+          java -cp out cpcs324.Main --skip-experiments > run.txt 2>&1
+          code=$?
+          set -e
+          cat run.txt
+          if grep -q 'TODO(' run.txt; then
+            echo "::notice title=Main pending::Main is not implemented yet; skipping the run check."
+            exit 0
+          fi
+          {
+            echo '### Program output (campus graph)'
+            echo '```'
+            cat run.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
