@@ -1,6 +1,12 @@
 package cpcs324;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,7 +29,9 @@ import java.util.List;
  */
 public class Graph {
 
-    // TODO(Badr): fields: vertex count, the adjacency lists, and the list of all edges (each once).
+    private final List<List<Edge>> adjacency;
+    private final List<Edge> edges = new ArrayList<>();
+    private final List<Edge> edgeView = Collections.unmodifiableList(edges);
 
     /**
      * Creates a graph with {@code vertexCount} vertices labeled B1..Bn and no edges.
@@ -31,7 +39,13 @@ public class Graph {
      * @param vertexCount number of vertices, at least 1
      */
     public Graph(int vertexCount) {
-        throw new UnsupportedOperationException("TODO(Badr): Graph constructor");
+        if (vertexCount < 1) {
+            throw new IllegalArgumentException("Vertex count must be at least 1: " + vertexCount);
+        }
+        adjacency = new ArrayList<>(vertexCount);
+        for (int vertex = 0; vertex < vertexCount; vertex++) {
+            adjacency.add(new ArrayList<>());
+        }
     }
 
     /**
@@ -52,7 +66,37 @@ public class Graph {
      *                                  edge lines, unknown vertex label, non-integer weight)
      */
     public static Graph readGraphFromFile(String filename) throws IOException {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.readGraphFromFile");
+        try (BufferedReader reader = Files.newBufferedReader(Path.of(filename))) {
+            String[] header = readFields(reader.readLine(), 2, 1);
+            int vertices = parseInteger(header[0], "vertex count", 1);
+            int expectedEdges = parseInteger(header[1], "edge count", 1);
+            if (vertices < 1 || expectedEdges < 0) {
+                throw new IllegalArgumentException(
+                        "Line 1: vertex count must be at least 1 and edge count must be non-negative");
+            }
+            Graph graph = new Graph(vertices);
+            for (int i = 0; i < expectedEdges; i++) {
+                long lineNumber = (long) i + 2;
+                String line = reader.readLine();
+                if (line == null) {
+                    throw new IllegalArgumentException("Line " + lineNumber + ": expected "
+                            + expectedEdges + " edge lines but found " + i);
+                }
+                String[] fields = readFields(line, 3, lineNumber);
+                int weight = parseInteger(fields[2], "edge weight", lineNumber);
+                try {
+                    graph.addEdge(fields[0], fields[1], weight);
+                } catch (IllegalArgumentException ex) {
+                    throw new IllegalArgumentException("Line " + lineNumber + ": " + ex.getMessage(), ex);
+                }
+            }
+            // A final newline is normal; any additional record, even blank, is malformed.
+            if (reader.readLine() != null) {
+                throw new IllegalArgumentException("Line " + ((long) expectedEdges + 2)
+                        + ": unexpected extra line; header declares " + expectedEdges + " edges");
+            }
+            return graph;
+        }
     }
 
     /**
@@ -65,7 +109,12 @@ public class Graph {
      * @param weight edge weight
      */
     public void addEdge(int u, int v, int weight) {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.addEdge(int,int,int)");
+        checkVertex(u);
+        checkVertex(v);
+        Edge edge = new Edge(u, v, weight);
+        adjacency.get(u).add(edge);
+        adjacency.get(v).add(edge);
+        edges.add(edge);
     }
 
     /**
@@ -74,17 +123,17 @@ public class Graph {
      * @throws IllegalArgumentException if a label is not B1..Bn
      */
     public void addEdge(String u, String v, int weight) {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.addEdge(String,String,int)");
+        addEdge(indexOf(u), indexOf(v), weight);
     }
 
     /** @return number of vertices n */
     public int getVertexCount() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.getVertexCount");
+        return adjacency.size();
     }
 
     /** @return number of undirected edges m (each edge counted once) */
     public int getEdgeCount() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.getEdgeCount");
+        return edges.size();
     }
 
     /**
@@ -92,7 +141,8 @@ public class Graph {
      * @return the label, e.g. {@code getLabel(0)} is {@code "B1"}
      */
     public String getLabel(int vertex) {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.getLabel");
+        checkVertex(vertex);
+        return "B" + (vertex + 1);
     }
 
     /**
@@ -101,7 +151,21 @@ public class Graph {
      * @throws IllegalArgumentException if the label does not name a vertex of this graph
      */
     public int indexOf(String label) {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.indexOf");
+        if (label == null || !label.matches("B[1-9][0-9]*")) {
+            throw new IllegalArgumentException("Unknown vertex label: " + label
+                    + " (expected B1..B" + getVertexCount() + ")");
+        }
+        int number;
+        try {
+            number = Integer.parseInt(label.substring(1));
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Unknown vertex label: " + label, ex);
+        }
+        if (number > getVertexCount()) {
+            throw new IllegalArgumentException("Unknown vertex label: " + label
+                    + " (expected B1..B" + getVertexCount() + ")");
+        }
+        return number - 1;
     }
 
     /**
@@ -110,22 +174,32 @@ public class Graph {
      *         Callers must not modify the returned list.
      */
     public List<Edge> getNeighbors(int vertex) {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.getNeighbors");
+        checkVertex(vertex);
+        return Collections.unmodifiableList(adjacency.get(vertex));
     }
 
     /** @return every undirected edge exactly once. Callers must not modify the list. */
     public List<Edge> getEdges() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.getEdges");
+        return edgeView;
     }
 
     /** @return sum of all edge weights, each edge counted once (41 for the campus graph) */
     public long getTotalEdgeWeight() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.getTotalEdgeWeight");
+        long total = 0;
+        for (Edge edge : edges) {
+            total += edge.getWeight();
+        }
+        return total;
     }
 
     /** @return {@code true} if every edge weight is strictly positive */
     public boolean hasOnlyPositiveWeights() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.hasOnlyPositiveWeights");
+        for (Edge edge : edges) {
+            if (edge.getWeight() <= 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -134,7 +208,28 @@ public class Graph {
      * @return number of connected components (1 for a valid campus network)
      */
     public int countConnectedComponents() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.countConnectedComponents");
+        boolean[] visited = new boolean[getVertexCount()];
+        ArrayDeque<Integer> queue = new ArrayDeque<>();
+        int components = 0;
+        for (int start = 0; start < getVertexCount(); start++) {
+            if (visited[start]) {
+                continue;
+            }
+            components++;
+            visited[start] = true;
+            queue.addLast(start);
+            while (!queue.isEmpty()) {
+                int vertex = queue.removeFirst();
+                for (Edge edge : adjacency.get(vertex)) {
+                    int neighbor = edge.other(vertex);
+                    if (!visited[neighbor]) {
+                        visited[neighbor] = true;
+                        queue.addLast(neighbor);
+                    }
+                }
+            }
+        }
+        return components;
     }
 
     /**
@@ -145,6 +240,45 @@ public class Graph {
      *         {@code "Graph is not connected (2 components)"}
      */
     public List<String> validate() {
-        throw new UnsupportedOperationException("TODO(Badr): Graph.validate");
+        List<String> problems = new ArrayList<>();
+        for (Edge edge : edges) {
+            if (edge.getWeight() <= 0) {
+                problems.add("Edge " + getLabel(edge.getFrom()) + " - " + getLabel(edge.getTo())
+                        + " has non-positive weight " + edge.getWeight());
+            }
+        }
+        int components = countConnectedComponents();
+        if (components != 1) {
+            problems.add("Graph is not connected (" + components + " components)");
+        }
+        return List.copyOf(problems);
+    }
+
+    private void checkVertex(int vertex) {
+        if (vertex < 0 || vertex >= getVertexCount()) {
+            throw new IllegalArgumentException("Vertex index " + vertex
+                    + " is outside 0.." + (getVertexCount() - 1));
+        }
+    }
+
+    private static String[] readFields(String line, int expected, long lineNumber) {
+        if (line == null || line.isBlank()) {
+            throw new IllegalArgumentException("Line " + lineNumber + ": expected " + expected + " fields");
+        }
+        String[] fields = line.strip().split("\\s+");
+        if (fields.length != expected) {
+            throw new IllegalArgumentException("Line " + lineNumber + ": expected " + expected
+                    + " fields but found " + fields.length);
+        }
+        return fields;
+    }
+
+    private static int parseInteger(String value, String description, long lineNumber) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Line " + lineNumber + ": invalid integer "
+                    + description + " '" + value + "'", ex);
+        }
     }
 }
