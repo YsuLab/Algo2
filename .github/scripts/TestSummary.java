@@ -30,6 +30,7 @@ public class TestSummary {
             "GraphTest", "Badr",
             "PrimMSTTest", "Yasir",
             "MainOutputTest", "Yasir",
+            "RunRecorderTest", "Yasir",
             "RandomGraphGeneratorTest", "Ahmed",
             "ExperimentsTest", "Ahmed");
 
