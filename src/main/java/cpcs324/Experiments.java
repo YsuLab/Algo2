@@ -1,6 +1,7 @@
 package cpcs324;
 
 import java.io.PrintStream;
+import java.util.Locale;
 
 /**
  * Experiments A and B: running time of heap-based Prim versus graph size and edge count.
@@ -45,7 +46,35 @@ public final class Experiments {
      * @return the running time of each run in milliseconds, length {@value #RUNS}
      */
     public static double[] timePrim(Graph graph) {
-        throw new UnsupportedOperationException("TODO(Ahmed): Experiments.timePrim");
+        int expectedEdges = graph.getVertexCount() - 1;
+        PrimMST prim = new PrimMST(graph);
+        // PrimMST.run resets its state on every call.
+        prim.run(0, false);
+        long expectedCost = checkedCost(prim, expectedEdges);
+
+        double[] times = new double[RUNS];
+        for (int i = 0; i < times.length; i++) {
+            long start = System.nanoTime();
+            prim.run(0, false);
+            long elapsed = System.nanoTime() - start;
+
+            long cost = checkedCost(prim, expectedEdges);
+            if (cost != expectedCost) {
+                throw new IllegalStateException("Prim run " + (i + 1) + " returned cost "
+                    + cost + "; expected " + expectedCost);
+            }
+            times[i] = elapsed / 1_000_000.0;
+        }
+        return times;
+    }
+
+    private static long checkedCost(PrimMST prim, int expectedEdges) {
+        int actualEdges = prim.getMstEdges().size();
+        if (actualEdges != expectedEdges) {
+            throw new IllegalStateException("Prim returned " + actualEdges
+                + " MST edges; expected " + expectedEdges);
+        }
+        return prim.getTotalCost();
     }
 
     /**
@@ -55,6 +84,32 @@ public final class Experiments {
      * @param out where to print the tables
      */
     public static void runAll(PrintStream out) {
-        throw new UnsupportedOperationException("TODO(Ahmed): Experiments.runAll");
+        printExperiment(out, "Experiment A", EXPERIMENT_A);
+        out.println();
+        printExperiment(out, "Experiment B", EXPERIMENT_B);
+    }
+
+    private static void printExperiment(PrintStream out, String title, int[][] configurations) {
+        out.println(title + " (ms)");
+        out.printf(Locale.ROOT, "%6s %6s", "n", "m");
+        for (int i = 1; i <= RUNS; i++) {
+            out.printf(Locale.ROOT, " %10s", "Run " + i);
+        }
+        out.printf(Locale.ROOT, " %10s%n", "Average");
+
+        for (int[] configuration : configurations) {
+            int n = configuration[0];
+            int m = configuration[1];
+            Graph graph = RandomGraphGenerator.generateRandomGraph(n, m);
+            double[] times = timePrim(graph);
+
+            out.printf(Locale.ROOT, "%6d %6d", n, m);
+            double total = 0;
+            for (double time : times) {
+                out.printf(Locale.ROOT, " %10.3f", time);
+                total += time;
+            }
+            out.printf(Locale.ROOT, " %10.3f%n", total / times.length);
+        }
     }
 }
