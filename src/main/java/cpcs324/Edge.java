@@ -11,7 +11,9 @@ package cpcs324;
  */
 public final class Edge {
 
-    // TODO(Badr): fields for the two endpoints and the weight (make them private and final).
+    private final int from;
+    private final int to;
+    private final int weight;
 
     /**
      * Creates an edge between {@code u} and {@code v}.
@@ -21,22 +23,24 @@ public final class Edge {
      * @param weight installation cost of this cable
      */
     public Edge(int u, int v, int weight) {
-        throw new UnsupportedOperationException("TODO(Badr): Edge constructor");
+        this.from = u;
+        this.to = v;
+        this.weight = weight;
     }
 
     /** @return the first endpoint, in the order the edge was created */
     public int getFrom() {
-        throw new UnsupportedOperationException("TODO(Badr): Edge.getFrom");
+        return from;
     }
 
     /** @return the second endpoint, in the order the edge was created */
     public int getTo() {
-        throw new UnsupportedOperationException("TODO(Badr): Edge.getTo");
+        return to;
     }
 
     /** @return the installation cost of this edge */
     public int getWeight() {
-        throw new UnsupportedOperationException("TODO(Badr): Edge.getWeight");
+        return weight;
     }
 
     /**
@@ -47,6 +51,13 @@ public final class Edge {
      * @throws IllegalArgumentException if {@code vertex} is not an endpoint of this edge
      */
     public int other(int vertex) {
-        throw new UnsupportedOperationException("TODO(Badr): Edge.other");
+        if (vertex == from) {
+            return to;
+        }
+        if (vertex == to) {
+            return from;
+        }
+        throw new IllegalArgumentException("Vertex " + vertex
+                + " is not an endpoint of edge " + from + " - " + to);
     }
 }
