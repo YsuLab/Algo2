@@ -22,3 +22,6 @@ Thumbs.db
 # Local experiment dumps (attach final numbers to the report, not the repo)
 experiments*.txt
 *.csv
+
+# Saved runs (created by the program on every run)
+runs/
